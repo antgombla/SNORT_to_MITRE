@@ -1,0 +1,129 @@
+Objetivos: Mapeo "Mensaje ataque" => MITRE
+
+1) Analizar y comprender el funcionamiento de las herramientas de vectorización de cadenas de texto: Word to Vector (Word2vec)
+	- Usan IA, pero no ChatGPT
+	- La idea es vectorizar usando Word to Vector de igual modo a como lo hace el artículo referenciado.
+	- Word2Vec (introducción): https://datascientest.com/es/nlp-word-embedding-word2vec-es
+
+2) Construir un motor propio de vectorización que realice:
+
+	Mensaje (SID)	->	Vectores	->	Clústeres		-> (asignación manual Nº_clúster-Técnica/táctica)	->	Táctica/Técnica
+
+
+
+METODOLOGÍA
+
+1º Construir el motor de vectorización usando Word2Vec (basándonos en como lo hace el artículo)
+
+2º Aplicarlo sobre Snort (IDS => Red => Técnicas MITRE capturables en Red)
+	- Nota: la lista SID-Mensaje puede sacarse de los ficheros de reglas (.rules), aunque Snort también
+		   ofrece un fichero "sig-msg.map" con sólo esa asociación.
+			https://github.com/eldondev/Snort/blob/master/etc/sid-msg.map
+	- Usar las reglas de Snort Talos (Community y Registered) y ETOpen
+
+3º Script para extraer (en tabla Excel) la asociación SID (Msg) - Táctica/Técnica MITRE realizada por Snort para todos los SIDs:
+
+	https://www.snort.org/rule_docs/1-1000002#tab-mitre
+
+4º Calibrar/Validar el motor en base a esa asociación.
+
+5º Aplicar el motor sobre las reglas de otro IDS/WAF: posibles propuestas
+
+	* Mapeo de TODAS las técnicas MITRE (Red y Host)
+
+	* Mapeo "CVE Value (ID) - MITRE":	https://github.com/CVEProject/cvelistV5/tree/main
+		- Propuesta recomendada
+
+============
+
+	* OSSEC (HIDS):	https://www.ossec.net/
+		https://github.com/ossec/ossec-rules/tree/master/rules.d/
+		- Problema: sus reglas no son ataques en sí
+
+
+	* Mod-Security (WAF):	extraer id-msg. Ejemplo:
+		https://github.com/coreruleset/coreruleset/blob/main/rules/REQUEST-933-APPLICATION-ATTACK-PHP.conf
+		- Problema: en general: 	Exploit Public-Facing Application
+						https://attack.mitre.org/techniques/T1190/
+	
+		
+
+
+
+=== NOTA: Reglas Snort usadas
+
+Talos:          https://www.snort.org/talos
+    * Community https://www.snort.org/downloads/#rule-downloads
+                https://www.snort.org/downloads/community/snort3-community-rules.tar.gz
+                + Significado reglas: https://www.snort.org/rule_docs/
+                                      Ejemplo: https://www.snort.org/rule_docs/1-1000002
+                    - En la pestaña MITRE se indica la Táctica y Técnica del ataque asociado a cada SID
+                + Releases:     https://www.snort.org/talos
+                NOTA: No son las reglas Talos oficiales, sino las que contribuye la comunidad, por lo que su fiabilidad
+                      es dudable y tienden a generar muchos falsos positivos (sobre 4229 reglas)
+    * Registered (requiere acceso con login):
+                https://snort.org/rules/Talos_LightSPD.tar.gz
+                SID < 1000000 (bajos normalmente, por debajo del 10000)
+                NOTA: son las reglas certificadas por Talos (sobre 43k), que incluyen la mayoría de las reglas community.
+
+    * Suscribed
+    COMPATIBLES CON: Snort 3
+    NOTACION Reglas Jesus:      SN=Talos                http_uri-sn-20220324.rules
+
+
+ETopen:         https://doc.emergingthreats.net/
+                https://rules.emergingthreatspro.com/open/
+                Releases:       https://community.emergingthreats.net/c/ruleset-updates/
+                https://rules.emergingthreats.net/open/snort-2.9.0/emerging-all.rules.tar.gz
+                NOTA: Tiene parte de las reglas comentadas. Las reglas obsoletas están marcadas con "ET DELETED"
+                ETopen optimizada: Descomentar las reglas, salvo las marcadas con "ET DELETED"
+                SID > 2000000
+                COMPATIBLES CON: Snort 2
+                NOTACION Reglas Jesus:  ER=ETOpen       http_uri-er-20220224.rules
+
+
+====
+
+
+1º Analizar con ChatGPT el campo "Description" de los SID de Snort para generar vectores de datos (en base a las palabras de la descripción).
+
+2º Agrupar los vectores en clúster (por similitud).
+
+3º Asociar esos clúster con tácticas de MITRE (https://attack.mitre.org/matrices/enterprise/).
+
+comprobando si la asociación es coherente con los SIDs mediante una pequeña validación experimental con algunos ataques de red.
+
+
+SID -> MITRE: Manual 
+SID -> Vectores -> Cluster -> Táctica MITRE: Automático
+
+1º ¿Coinciden asociaciones manuales?
+2º Prueba experimental asociación MITRE automática
+
+
+=== Referencias
+
+Para que te puedas hacer una idea más precisa de lo que sería el trabajo, te envío el enlace de un artículo que sirve de referencia para ver como tratar "el texto de las alertas de Snort" que te comentaba:
+
+https://www.editorialmanager.com/pone/download.aspx?id=34941930&guid=40cbda31-52b3-4a0b-b7a5-17b250de6337&scheme=1
+
+
+Para entenderlo, habría que leerse también las siguientes referencias (del propio artículo):
+
+31. Mikolov T, Chen K, Corrado G, Dean J. Efficient estimation of word representations in vector space. arXiv preprint arXiv:13013781. 2013;.
+
+https://arxiv.org/pdf/1301.3781.pdf
+
+
+32. Wang J, Zhao C, He S, Gu Y, Alfarraj O, Abugabah A. LogUAD: log unsupervised anomaly detection based on Word2Vec. Computer Systems Science and Engineering. 2022;41(3):1207.
+
+https://www.techscience.com/static/js/StreamSaver.js-2.0.6/www.techscience.com/058648/TSP_CSSE_22365.pdf
+
+
+33. Le Q, Mikolov T. Distributed representations of sentences and documents. In: International conference on machine learning. PMLR; 2014. p. 1188–1196.
+
+https://arxiv.org/pdf/1405.4053.pdf
+
+
+
+Un comentario más. Este trabajo nos haría falta tenerlo terminado lo antes posible. Así, si decidieses hacerlo, habría que empezar cuanto antes para poderlo tener terminado este curso.

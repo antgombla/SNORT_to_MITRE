@@ -1,0 +1,4 @@
+gensim
+pypdf2
+tqdm
+request
